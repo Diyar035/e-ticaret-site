@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import AuthProvider from "@/components/providers/AuthProvider"; // <-- YENİ EKLENDİ
+
+// PROVIDER'LAR
+import AuthProvider from "@/components/providers/AuthProvider";
+import { CartProvider } from "@/context/cart";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "E-Ticaret Admin",
-  description: "Yönetim Paneli",
+  title: "E-Ticaret",
+  description: "Alışverişin Adresi",
 };
 
 export default function RootLayout({
@@ -18,8 +21,12 @@ export default function RootLayout({
   return (
     <html lang="tr">
       <body className={inter.className}>
-        {/* BÜTÜN UYGULAMAYI SARIYORUZ */}
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <CartProvider>
+            {/* Burası tüm uygulamanın ana kapsayıcısı */}
+            {children}
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   );

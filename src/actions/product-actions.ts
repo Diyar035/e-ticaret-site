@@ -12,20 +12,17 @@ export async function createProductAction(formData: FormData) {
     const priceStr = formData.get("price") as string;
     const categoryId = formData.get("categoryId") as string;
 
-    if (!priceStr || isNaN(parseFloat(priceStr))) {
-      throw new Error("Geçerli bir fiyat giriniz.");
-    }
-    if (!categoryId) {
-      throw new Error("Kategori seçimi zorunludur!");
-    }
-
-    const price = parseFloat(priceStr);
+    if (!categoryId) throw new Error("Lütfen bir kategori seçiniz!");
 
     const files = formData.getAll("images") as File[];
     const imageUrls: string[] = [];
 
+    // --- DOSYA KAYDETME İŞLEMİ ---
     if (files && files.length > 0) {
+      // Klasör yolunu belirle
       const uploadDir = path.join(process.cwd(), "public/uploads");
+
+      // Klasör yoksa oluştur (Önemli!)
       await mkdir(uploadDir, { recursive: true });
 
       for (const file of files) {
@@ -34,38 +31,38 @@ export async function createProductAction(formData: FormData) {
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
 
+        // Türkçe karakter ve boşlukları temizle
         const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, "_").toLowerCase();
         const fileName = `${Date.now()}-${safeName}`;
         const uploadPath = path.join(uploadDir, fileName);
 
         try {
           await writeFile(uploadPath, buffer);
+          // Veritabanına '/uploads/...' olarak kaydet
           imageUrls.push(`/uploads/${fileName}`);
-        } catch (fileError) {
-          console.error("Dosya yazma hatası:", fileError);
+        } catch (err) {
+          console.error("Resim kaydedilemedi:", err);
         }
       }
     }
 
+    // Veritabanına Ekle
     await prisma.product.create({
       data: {
         name,
         description,
-        price,
+        price: parseFloat(priceStr),
         categoryId,
         isActive: true,
-        images: imageUrls,
+        images: imageUrls, // Resim yolları burada
       },
     });
   } catch (error: unknown) {
-    console.error("Ürün ekleme hatası detaylı:", error);
-    let errorMessage = "Sunucu tarafında bir hata oluştu.";
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    }
-    throw new Error(errorMessage);
+    console.error("Hata:", error);
+    let msg = "Sunucu hatası";
+    if (error instanceof Error) msg = error.message;
+    throw new Error(msg);
   }
 
-  // Redirect, try-catch bloğunun DIŞINDA olmalı (Next.js kuralı)
   redirect("/admin/products");
 }
