@@ -14,10 +14,10 @@ export default async function HomePage() {
   const dbProducts = await prisma.product.findMany({
     where: { isActive: true },
     orderBy: { createdAt: "desc" },
-    include: { category: true }, // <-- Kategoriyi dahil ediyoruz ki ismini/slug'ını alalım
+    include: { category: true },
   });
 
-  // 3. Veriyi ProductCard'ın anlayacağı dile çevir (Mapping)
+  // 3. Veriyi Dönüştür (Mapping)
   const products = dbProducts.map((p) => ({
     id: p.id,
     name: p.name,
@@ -25,17 +25,18 @@ export default async function HomePage() {
     price: p.price,
     image_url: p.images[0] || "https://via.placeholder.com/300",
 
-    // --- BURASI SENİN DEDİĞİN KISIM ---
-    // Slug ve İsim kategorinin içinde olduğu için oradan alıyoruz
+    // --- STOK BİLGİSİNİ BURADA GÖNDERİYORUZ ---
+    stock: p.stock, // (Eğer burada p.stock yoksa 0 gider, o yüzden önemli)
+    // ------------------------------------------
+
     category_id: p.categoryId,
-    category_title: p.category?.name || "Genel", // Kategori ismini gönderiyoruz
-    category_slug: p.category?.slug || "#", // Kategori linki için slug'ı gönderiyoruz
+    category_title: p.category?.name || "Genel",
+    category_slug: p.category?.slug || "#",
 
     is_featured: false,
     created_at: p.createdAt.toISOString(),
     rating: 5,
     brand: "Genel",
-    stock: 100,
     old_price: p.price * 1.2,
   }));
 
@@ -60,9 +61,9 @@ export default async function HomePage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {products.map((product) => (
-                // Burada Type Hatası alırsan ProductCard tipini güncellemen gerekebilir
-                // Ama şimdilik product prop'u içine ekstra bilgi gitmesinin zararı olmaz.
-                <ProductCard key={product.id} product={product} />
+                // TypeScript hatasını önlemek için 'as any' kullanıyoruz
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                <ProductCard key={product.id} product={product as any} />
               ))}
             </div>
           )}

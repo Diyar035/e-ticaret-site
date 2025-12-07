@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import CategorySelector from "@/components/admin/CategorySelector";
 
 type Category = {
@@ -9,40 +9,35 @@ type Category = {
   children: { id: string; name: string }[];
 };
 
-// YENİLİK: 'initialCategoryId' diye bir prop ekledik (Varsayılan Kategori)
+// --- DÜZELTME BURADA: initialCategoryId EKLENDİ ---
 export default function ClientCategorySection({
   categories,
   initialCategoryId,
 }: {
   categories: Category[];
-  initialCategoryId?: string; // Bu opsiyonel, yeni ürün eklerken boş gelir
+  initialCategoryId?: string; // Soru işareti opsiyonel demek
 }) {
   const [selectedId, setSelectedId] = useState(initialCategoryId || "");
 
-  // Eğer dışarıdan initialCategoryId gelirse state'i güncelle (Edit sayfası için)
-  useEffect(() => {
-    if (initialCategoryId) {
-      setSelectedId(initialCategoryId);
-    }
-  }, [initialCategoryId]);
-
   return (
-    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-      <h3 className="font-semibold text-gray-700 mb-3">Kategori Belirle</h3>
+    <div className="w-full bg-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm">
+      <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+        📂 Kategori Belirle
+      </h3>
 
-      {/* Selector bileşenine de initial değer yollamak lazım ama şimdilik */}
-      {/* basit tutmak için görsel olarak seçili gelmesini manual yapıyoruz */}
       <CategorySelector
         categories={categories}
+        initialSelectedId={initialCategoryId} // Selector'a iletiyoruz
         onSelect={(id) => setSelectedId(id)}
       />
 
-      {/* Eğer düzenleme modundaysak ve kullanıcı henüz değiştirmediyse eski ID kalır */}
       <input type="hidden" name="categoryId" value={selectedId} />
 
-      <div className="mt-2 text-xs text-gray-500">
-        Seçili Kategori ID: {selectedId || "Henüz seçilmedi"}
-      </div>
+      {!selectedId && (
+        <p className="text-xs text-orange-500 mt-2 font-medium">
+          * Lütfen ürünün ekleneceği alt kategoriyi seçiniz.
+        </p>
+      )}
     </div>
   );
 }

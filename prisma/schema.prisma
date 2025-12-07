@@ -28,6 +28,7 @@ model Product {
   name        String
   description String
   price       Float
+  stock       Int      @default(1) // <-- Yeni eklediğimiz stok alanı
   images      String[]
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
