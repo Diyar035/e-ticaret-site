@@ -1,0 +1,83 @@
+// Dosya: src/components/layout/Header.tsx
+import { prisma } from "@/lib/prisma-client";
+import Image from "next/image";
+import Link from "next/link";
+import { Heart } from "lucide-react";
+
+// Bileşen Importları
+import UserMenu from "./UserMenu";
+import { SearchBar } from "@/components/forms/SearchBar";
+import CartButton from "./CartButton";
+import CategoryHeader from "./category-nav/CategoryHeader";
+import MobileMenu from "./MobileMenu"; // Yanındaki dosyayı çağırıyoruz
+
+export default async function Header() {
+  const categories = await prisma.category.findMany({
+    where: { parentId: null },
+    include: { children: true },
+    orderBy: { name: "asc" },
+  });
+
+  return (
+    <header className="bg-white/90 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50">
+      <div className="container mx-auto flex justify-between items-center py-3 px-6 h-20">
+        <div className="flex items-center gap-2">
+          {/* MOBİL MENÜ BUTONU (Logo'nun soluna ekledik) */}
+          <MobileMenu categories={categories} />
+
+          <Link
+            href="/"
+            className="flex-shrink-0 hover:opacity-90 transition-opacity"
+          >
+            <Image
+              src="/kervanpazar-logo.png"
+              alt="KervanPazar"
+              width={180}
+              height={40}
+              className="object-contain h-10 w-auto"
+              priority
+            />
+          </Link>
+        </div>
+
+        {/* Masaüstü Arama */}
+        <div className="hidden md:block flex-1 max-w-xl mx-8">
+          <SearchBar />
+        </div>
+
+        {/* Sağ Taraf İkonlar */}
+        <div className="flex items-center gap-3">
+          <div className="hidden md:block">
+            <UserMenu />
+          </div>
+          <div className="hidden md:block">
+            <Link
+              href="/account/favorites"
+              className="group flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-red-50 transition-all duration-300"
+              title="Favorilerim"
+            >
+              <Heart
+                size={20}
+                className="text-gray-500 group-hover:text-red-500 group-hover:fill-current transition-all duration-300"
+              />
+              <span className="text-sm font-bold text-gray-600 group-hover:text-red-600 transition-colors">
+                Favorilerim
+              </span>
+            </Link>
+          </div>
+          <CartButton />
+        </div>
+      </div>
+
+      {/* --- Masaüstü Kategori Navigasyonu --- */}
+      <div className="border-t border-gray-100 hidden md:block">
+        <CategoryHeader categories={categories} />
+      </div>
+
+      {/* Mobil Arama Çubuğu */}
+      <div className="md:hidden p-4 border-t border-gray-50">
+        <SearchBar />
+      </div>
+    </header>
+  );
+}
