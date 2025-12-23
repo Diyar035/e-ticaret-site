@@ -2,16 +2,20 @@ import { prisma } from "@/lib/prisma-client";
 import ProductForm from "@/components/admin/products/ProductForm";
 import { notFound } from "next/navigation";
 
+// Next.js 15 için tip tanımı (Promise olmalı)
 interface PageProps {
-  params: {
+  params: Promise<{
     productId: string;
-  };
+  }>;
 }
 
 export default async function EditProductPage({ params }: PageProps) {
-  // 1. Ürünü tüm detaylarıyla çek
+  // 1. Next.js 15 kuralı: params'ı önce await ediyoruz
+  const { productId } = await params;
+
+  // 2. Ürünü tüm detaylarıyla çek
   const product = await prisma.product.findUnique({
-    where: { id: params.productId },
+    where: { id: productId },
     include: {
       images: true,
       variants: true,
@@ -23,7 +27,7 @@ export default async function EditProductPage({ params }: PageProps) {
     notFound();
   }
 
-  // 2. Kategorileri ve Markaları çek (Select kutuları için)
+  // 3. Kategorileri ve Markaları çek (Select kutuları için)
   const categories = await prisma.category.findMany({
     include: {
       children: {
@@ -39,7 +43,7 @@ export default async function EditProductPage({ params }: PageProps) {
 
   const brands = await prisma.brand.findMany();
 
-  // 3. Decimal Tiplerini Number'a Çevir (Serialization Hatası Almamak İçin)
+  // 4. Decimal Tiplerini Number'a Çevir (Serialization Hatası Almamak İçin)
   const formattedProduct = {
     ...product,
     price: Number(product.price),
