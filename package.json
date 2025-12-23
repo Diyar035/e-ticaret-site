@@ -9,16 +9,22 @@
     "lint": "eslint"
   },
   "dependencies": {
+<<<<<<< HEAD
     "@hookform/resolvers": "^5.2.2",
     "@next-auth/prisma-adapter": "^1.0.7",
     "@prisma/client": "^6.17.1",
     "@types/react-toastify": "^4.1.0",
     "@types/uuid": "^11.0.0",
     "axios": "^1.13.2",
+=======
+    "@next-auth/prisma-adapter": "^1.0.7",
+    "@prisma/client": "^6.19.0",
+>>>>>>> 428add33e1b337f3dce63e86a9165e3ddef89c65
     "bcrypt": "^6.0.0",
     "date-fns": "^4.1.0",
     "geist": "^1.5.1",
     "lucide-react": "^0.544.0",
+<<<<<<< HEAD
     "next": "^15.5.7",
     "next-auth": "^4.24.11",
     "react": "19.1.0",
@@ -34,6 +40,15 @@
     "uuid": "^13.0.0",
     "zod": "^4.1.13",
     "zustand": "^5.0.9"
+=======
+    "next": "15.5.3",
+    "next-auth": "^4.24.11",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-hot-toast": "^2.6.0",
+    "recharts": "^3.3.0",
+    "zod": "^4.1.12"
+>>>>>>> 428add33e1b337f3dce63e86a9165e3ddef89c65
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -42,7 +57,11 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+<<<<<<< HEAD
     "autoprefixer": "^10.4.22",
+=======
+    "autoprefixer": "^10.4.21",
+>>>>>>> 428add33e1b337f3dce63e86a9165e3ddef89c65
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
     "postcss": "^8.5.6",

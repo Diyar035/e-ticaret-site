@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { PrismaClient } from "@prisma/client";
+=======
+import { PrismaClient } from '@prisma/client';
+>>>>>>> 428add33e1b337f3dce63e86a9165e3ddef89c65
 
 /**
  * Prisma Client Singleton Pattern
@@ -34,9 +38,15 @@ export const prisma =
   new PrismaClient({
     // Ortama göre log seviyelerini ayarla
     log:
+<<<<<<< HEAD
       process.env.NODE_ENV === "development"
         ? ["query", "error", "warn"]
         : ["error"],
+=======
+      process.env.NODE_ENV === 'development'
+        ? ['query', 'error', 'warn']
+        : ['error'],
+>>>>>>> 428add33e1b337f3dce63e86a9165e3ddef89c65
   });
 
 /**
@@ -47,7 +57,11 @@ export const prisma =
  * - Bu, hot reload sırasında yeni database bağlantılarının
  *   oluşmasını engeller ve "too many connections" hatasını önler
  */
+<<<<<<< HEAD
 if (process.env.NODE_ENV !== "production") {
+=======
+if (process.env.NODE_ENV !== 'production') {
+>>>>>>> 428add33e1b337f3dce63e86a9165e3ddef89c65
   globalForPrisma.prisma = prisma;
 }
 
