@@ -1,11 +1,7 @@
-<<<<<<< HEAD
 // --------------------------------------
 // 1. CONFIGURATION
 // --------------------------------------
 
-=======
-// Prisma şema dosyası - Veritabanı modellerini tanımlar
->>>>>>> 428add33e1b337f3dce63e86a9165e3ddef89c65
 generator client {
   provider = "prisma-client-js"
 }
@@ -15,7 +11,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-<<<<<<< HEAD
 // --------------------------------------
 // 2. ENUMS
 // --------------------------------------
@@ -43,8 +38,6 @@ enum OrderStatus {
 // 3. AUTH & USER MANAGEMENT (NextAuth)
 // --------------------------------------
 
-=======
->>>>>>> 428add33e1b337f3dce63e86a9165e3ddef89c65
 model User {
   id            String    @id @default(cuid())
   firstName     String?
@@ -54,7 +47,6 @@ model User {
   image         String?
   passwordHash  String?
   role          Role      @default(USER)
-<<<<<<< HEAD
   phoneNumber   String?
    
   addresses     Address[]
@@ -66,15 +58,10 @@ model User {
   // KULLANICI SÖZLEŞMESİ BAĞLANTISI
   userAgreement UserAgreement?
 
-=======
-  accounts      Account[]
-  sessions      Session[]
->>>>>>> 428add33e1b337f3dce63e86a9165e3ddef89c65
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
 
-<<<<<<< HEAD
 // KULLANICI SÖZLEŞMESİ
 model UserAgreement {
   id        String    @id @default(cuid())
@@ -85,31 +72,6 @@ model UserAgreement {
   signedAt  DateTime? @default(now()) 
   version   String    @default("v1")  
   ipAddress String?                   
-=======
-model Product {
-  id          String   @id @default(cuid())
-  name        String
-  description String
-  price       Float
-  stock       Int      @default(1) // <-- Yeni eklediğimiz stok alanı
-  images      String[]
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  categoryId  String
-  category    Category @relation(fields: [categoryId], references: [id])
-}
-
-model Category {
-  id       String    @id @default(cuid())
-  name     String    @unique
-  slug     String    @unique
-  products Product[]
-
-  parentId  String?
-  parent    Category?   @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children  Category[]  @relation("CategoryHierarchy")
->>>>>>> 428add33e1b337f3dce63e86a9165e3ddef89c65
 }
 
 model Account {
@@ -118,21 +80,12 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-<<<<<<< HEAD
   refresh_token     String? @db.Text
   access_token      String? @db.Text
   expires_at        Int?
   token_type        String?
   scope             String?
   id_token          String? @db.Text
-=======
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
->>>>>>> 428add33e1b337f3dce63e86a9165e3ddef89c65
   session_state     String?
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -147,7 +100,6 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-<<<<<<< HEAD
 model Address {
   id          String   @id @default(cuid())
   userId      String
@@ -363,9 +315,4 @@ model AuditLog {
   userAgent  String?  
    
   createdAt  DateTime @default(now())
-=======
-enum Role {
-  USER
-  ADMIN
->>>>>>> 428add33e1b337f3dce63e86a9165e3ddef89c65
 }

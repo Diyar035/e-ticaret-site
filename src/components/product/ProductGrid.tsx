@@ -1,18 +1,9 @@
-<<<<<<< HEAD
 "use client";
 
 import { ListFilter, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Product } from "@prisma/client";
 import ProductCard from "./ProductCard";
-=======
-'use client';
-
-import { ListFilter, Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
-import { Product } from '@/types/index';
-import { ProductCard } from './ProductCard';
->>>>>>> 428add33e1b337f3dce63e86a9165e3ddef89c65
 
 // Props interface'i - ürün grid bileşeninin alacağı props'lar
 interface ProductGridProps {
@@ -21,21 +12,13 @@ interface ProductGridProps {
 
 /**
  * Ürün Grid Bileşeni
-<<<<<<< HEAD
  *
-=======
- * 
->>>>>>> 428add33e1b337f3dce63e86a9165e3ddef89c65
  * Ürün listelerini grid layout'ta gösteren bileşen.
  * Sıralama özelliği ve boş durum yönetimi içerir.
  */
 export function ProductGrid({ products }: ProductGridProps) {
   // Sıralama seçeneği state'i
-<<<<<<< HEAD
   const [sortOrder, setSortOrder] = useState("default");
-=======
-  const [sortOrder, setSortOrder] = useState('default');
->>>>>>> 428add33e1b337f3dce63e86a9165e3ddef89c65
 
   /**
    * useMemo ile optimize edilmiş sıralanmış ürün listesi
@@ -46,7 +29,6 @@ export function ProductGrid({ products }: ProductGridProps) {
 
     // Sıralama seçeneğine göre sıralama işlemi
     switch (sortOrder) {
-<<<<<<< HEAD
       case "price-asc":
         tempProducts.sort((a, b) => Number(a.price) - Number(b.price)); // Fiyat artan
         break;
@@ -55,16 +37,6 @@ export function ProductGrid({ products }: ProductGridProps) {
         break;
       case "name-asc":
         tempProducts.sort((a, b) => a.name.localeCompare(b.name, "tr")); // İsim A-Z (Türkçe destekli)
-=======
-      case 'price-asc':
-        tempProducts.sort((a, b) => a.price - b.price); // Fiyat artan
-        break;
-      case 'price-desc':
-        tempProducts.sort((a, b) => b.price - a.price); // Fiyat azalan
-        break;
-      case 'name-asc':
-        tempProducts.sort((a, b) => a.name.localeCompare(b.name, 'tr')); // İsim A-Z (Türkçe destekli)
->>>>>>> 428add33e1b337f3dce63e86a9165e3ddef89c65
         break;
       default:
         // Varsayılan sıralama - değişiklik yapma
@@ -92,10 +64,6 @@ export function ProductGrid({ products }: ProductGridProps) {
             <option value="name-asc">İsme Göre (A-Z)</option>
           </select>
 
-<<<<<<< HEAD
-=======
-          {/* Filtre İkonu */}
->>>>>>> 428add33e1b337f3dce63e86a9165e3ddef89c65
           <ListFilter
             size={20}
             className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400 pointer-events-none"
@@ -107,10 +75,6 @@ export function ProductGrid({ products }: ProductGridProps) {
       {/* ✅ Ürün Grid veya Boş Durum */}
       {sortedProducts.length > 0 ? (
         <>
-<<<<<<< HEAD
-=======
-          {/* Ürün Grid - Responsive tasarım */}
->>>>>>> 428add33e1b337f3dce63e86a9165e3ddef89c65
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {sortedProducts.map((product) => (
               <ProductCard key={product.id} product={product} />
@@ -132,8 +96,4 @@ export function ProductGrid({ products }: ProductGridProps) {
       )}
     </div>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 428add33e1b337f3dce63e86a9165e3ddef89c65

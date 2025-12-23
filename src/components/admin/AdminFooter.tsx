@@ -1,12 +1,6 @@
-<<<<<<< HEAD
 "use client";
 
 import { Building2, Shield } from "lucide-react";
-=======
-'use client';
-
-import { Building2, Shield } from 'lucide-react';
->>>>>>> 428add33e1b337f3dce63e86a9165e3ddef89c65
 
 /**
  * Admin Footer Bileşeni

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { Lock, Star, Truck, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import { prisma } from "@/lib/prisma-client"; // { prisma } süslü parantez ile import etmek genelde daha güvenlidir
@@ -111,79 +110,5 @@ export default async function HomePage() {
         </div>
       </div>
     </main>
-=======
-import { prisma } from "@/lib/prisma-client";
-import { ProductCard } from "@/components/product/ProductCard";
-import CategoryMenu from "@/components/home/CategoryMenu";
-
-export default async function HomePage() {
-  // 1. Kategorileri Çek (Sol Menü)
-  const categories = await prisma.category.findMany({
-    where: { parentId: null },
-    include: { _count: { select: { children: true } } },
-    orderBy: { name: "asc" },
-  });
-
-  // 2. Ürünleri Çek (Sağ Taraf)
-  const dbProducts = await prisma.product.findMany({
-    where: { isActive: true },
-    orderBy: { createdAt: "desc" },
-    include: { category: true },
-  });
-
-  // 3. Veriyi Dönüştür (Mapping)
-  const products = dbProducts.map((p) => ({
-    id: p.id,
-    name: p.name,
-    description: p.description,
-    price: p.price,
-    image_url: p.images[0] || "https://via.placeholder.com/300",
-
-    // --- STOK BİLGİSİNİ BURADA GÖNDERİYORUZ ---
-    stock: p.stock, // (Eğer burada p.stock yoksa 0 gider, o yüzden önemli)
-    // ------------------------------------------
-
-    category_id: p.categoryId,
-    category_title: p.category?.name || "Genel",
-    category_slug: p.category?.slug || "#",
-
-    is_featured: false,
-    created_at: p.createdAt.toISOString(),
-    rating: 5,
-    brand: "Genel",
-    old_price: p.price * 1.2,
-  }));
-
-  return (
-    <div className="container mx-auto p-4 md:p-6">
-      <div className="flex flex-col md:flex-row gap-6">
-        {/* Sol Menü */}
-        <aside className="hidden md:block w-64 flex-shrink-0">
-          <CategoryMenu />
-        </aside>
-
-        {/* Sağ Ürünler */}
-        <div className="flex-1">
-          <div className="bg-white p-4 rounded-lg shadow-sm border mb-6">
-            <h1 className="text-xl font-bold text-gray-800">Vitrin Ürünleri</h1>
-          </div>
-
-          {products.length === 0 ? (
-            <div className="text-center py-10 bg-white border border-dashed rounded">
-              <p className="text-gray-500">Henüz ürün yok.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {products.map((product) => (
-                // TypeScript hatasını önlemek için 'as any' kullanıyoruz
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                <ProductCard key={product.id} product={product as any} />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
->>>>>>> 428add33e1b337f3dce63e86a9165e3ddef89c65
   );
 }

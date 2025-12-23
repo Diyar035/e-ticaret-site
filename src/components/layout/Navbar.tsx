@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 "use client";
 
 import useCart from "@/hooks/use-cart";
@@ -30,35 +29,5 @@ export default function NavbarCartActions() {
         </span>
       </Link>
     </div>
-=======
-'use client';
-
-import { useCart } from '@/context/cart';
-import Link from 'next/link';
-
-/**
- * Navbar Bileşeni
- *
- * Basit navigasyon bileşeni - logo ve sepet gösterimi
- * Sepet ürün sayısını context'ten alarak dinamik olarak gösterir
- */
-export default function Navbar() {
-  // Sepet context'inden toplam ürün adedini al
-  const { totalItems } = useCart();
-
-  return (
-    <nav>
-      {/* Ana sayfaya yönlendiren logo/link */}
-      <Link href="/">KervanPazar</Link>
-
-      {/* Sepet sayfasına yönlendiren link */}
-      <Link href="/cart">
-        {/* Sepet ikonu */}
-        🛒
-        {/* Sepette ürün varsa sayıyı göster */}
-        {totalItems > 0 && <span>{totalItems}</span>}
-      </Link>
-    </nav>
->>>>>>> 428add33e1b337f3dce63e86a9165e3ddef89c65
   );
 }
