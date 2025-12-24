@@ -7,9 +7,13 @@ import DeleteProductButton from "@/components/admin/DeleteProductButton";
 
 export default async function ArchivePage() {
   // Veritabanından sadece PASİF (Arşivlenmiş) ürünleri çekiyoruz
+  // İlişkili tabloları (category ve images) include etmeyi unutmuyoruz
   const archivedProducts = await prisma.product.findMany({
     where: { isActive: false },
-    include: { category: true },
+    include: {
+      category: true,
+      images: true, // Ürün resimlerini de buradan çekiyoruz
+    },
     orderBy: { updatedAt: "desc" },
   });
 
@@ -45,9 +49,10 @@ export default async function ArchivePage() {
             {archivedProducts.map((product) => (
               <tr key={product.id} className="border-b hover:bg-gray-50">
                 <td className="p-3">
-                  {product.images[0] ? (
+                  {/* Resim objesinin içinden url bilgisini alıyoruz */}
+                  {product.images && product.images[0] ? (
                     <Image
-                      src={product.images[0]}
+                      src={product.images[0].url}
                       alt={product.name}
                       width={40}
                       height={40}
@@ -62,7 +67,10 @@ export default async function ArchivePage() {
                   {/* Üstü çizili isim */}
                   {product.name}
                 </td>
-                <td className="p-3 text-gray-500">{product.price} TL</td>
+                {/* Decimal tipindeki fiyatı ekrana basmak için string'e çeviriyoruz */}
+                <td className="p-3 text-gray-500">
+                  {product.price.toString()} TL
+                </td>
                 <td className="p-3 text-right flex justify-end gap-3">
                   {/* 1. Geri Yükle (Yeşil Buton) */}
                   <RestoreProductButton id={product.id} />

@@ -19,7 +19,6 @@ import {
   Mail,
   User,
   Fingerprint,
-  Calendar,
   ExternalLink,
   MoreVertical,
   Undo2,
@@ -32,7 +31,6 @@ import {
   Info,
 } from "lucide-react";
 
-// --- TİPLER ---
 interface OrderItem {
   id: string;
   quantity: number;
@@ -63,7 +61,7 @@ interface OrdersClientProps {
   searchQuery: string;
 }
 
-// --- VURGULAMA BİLEŞENİ ---
+// Burayı geri getirdim, arama yapınca kelimeler sarı yansın diye
 const Highlight = ({ text, query }: { text: string; query: string }) => {
   if (!query || !text) return <>{text}</>;
   const parts = text.split(new RegExp(`(${query})`, "gi"));
@@ -85,7 +83,6 @@ const Highlight = ({ text, query }: { text: string; query: string }) => {
   );
 };
 
-// --- CONFIRMATION STATE (MODAL AYARLARI) ---
 type ConfirmationType =
   | "SINGLE_CANCEL"
   | "BULK_CANCEL"
@@ -104,7 +101,6 @@ interface ConfirmationState {
   data: { id?: string; nextStatus?: OrderStatus } | null;
 }
 
-// --- TABS & STATUS HELPERS ---
 const TABS = [
   {
     id: "PENDING",
@@ -157,7 +153,6 @@ export default function OrdersClient({
   const [isUpdating, setIsUpdating] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
-  // 🔥 MERKEZİ ONAY SİSTEMİ STATE'İ
   const [confirmation, setConfirmation] = useState<ConfirmationState>({
     isOpen: false,
     type: null,
@@ -179,7 +174,6 @@ export default function OrdersClient({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // --- ACTIONS ---
   const handleTabChange = (status: string) => {
     setSelectedIds([]);
     setExpandedIds([]);
@@ -210,7 +204,6 @@ export default function OrdersClient({
 
   const toggleMenu = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    // Diğer açık menüleri kapatıp sadece tıklananı aç
     setActiveMenuId((prev) => (prev === id ? null : id));
   };
 
@@ -221,8 +214,9 @@ export default function OrdersClient({
     return null;
   };
 
+  // Burası senin istediğin "Geri Çağırınca Hazırlanıyor'a at" mantığı
   const getPrevStatus = (status: OrderStatus): OrderStatus | null => {
-    if (status === "DELIVERED") return "SHIPPED";
+    if (status === "DELIVERED") return "PROCESSING";
     if (status === "SHIPPED") return "PROCESSING";
     if (status === "PROCESSING") return "PENDING";
     return null;
@@ -252,9 +246,6 @@ export default function OrdersClient({
     return null;
   };
 
-  // --- 🔥 MODAL TETİKLEYİCİLERİ (REQUEST FUNCTIONS) ---
-
-  // 1. Tekli İptal
   const requestSingleCancel = (id: string) => {
     setConfirmation({
       isOpen: true,
@@ -269,50 +260,30 @@ export default function OrdersClient({
     setActiveMenuId(null);
   };
 
-  // 2. Toplu İptal
   const requestBulkCancel = () => {
     setConfirmation({
       isOpen: true,
       type: "BULK_CANCEL",
       title: "Toplu İptal Onayı",
-      description: (
-        <div className="text-center">
-          Seçilen{" "}
-          <strong className="text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
-            {selectedIds.length} adet
-          </strong>{" "}
-          siparişi iptal etmek istediğinize emin misiniz?
-        </div>
-      ),
+      description: `Seçilen ${selectedIds.length} adet siparişi iptal etmek istediğinize emin misiniz?`,
       confirmLabel: "Hepsini İptal Et",
       isDangerous: true,
       data: null,
     });
   };
 
-  // 3. Toplu Geri Yükleme
   const requestBulkRestore = () => {
     setConfirmation({
       isOpen: true,
       type: "BULK_RESTORE",
       title: "Sisteme Geri Dahil Et",
-      description: (
-        <div className="text-center">
-          Seçilen{" "}
-          <strong className="text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
-            {selectedIds.length} adet
-          </strong>{" "}
-          iptal edilmiş siparişi tekrar aktif (Bekleyen) duruma getirmek istiyor
-          musunuz?
-        </div>
-      ),
+      description: `Seçilen ${selectedIds.length} adet iptal edilmiş siparişi tekrar Bekleyen duruma getirelim mi knk?`,
       confirmLabel: "Evet, Dahil Et",
-      isDangerous: false, // Yeşil buton
+      isDangerous: false,
       data: null,
     });
   };
 
-  // 4. Toplu İlerleme (Next Action)
   const requestBulkUpdate = () => {
     const action = getNextStatusAction();
     if (!action) return;
@@ -320,75 +291,45 @@ export default function OrdersClient({
       isOpen: true,
       type: "BULK_UPDATE",
       title: "Durum Güncellemesi",
-      description: (
-        <div className="text-center">
-          Seçilen{" "}
-          <strong className="text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
-            {selectedIds.length} adet
-          </strong>{" "}
-          siparişi <strong className="text-indigo-600">{action.label}</strong>{" "}
-          işlemine tabi tutmak istiyor musunuz?
-        </div>
-      ),
+      description: `Seçilen ${selectedIds.length} adet siparişi bir sonraki aşamaya taşıyoruz.`,
       confirmLabel: "Evet, Onayla",
       isDangerous: false,
       data: { nextStatus: action.next },
     });
   };
 
-  // 5. Tekli Durum Değişikliği (Menüden)
   const requestSingleUpdate = (id: string, newStatus: OrderStatus) => {
     const statusLabel = getStatusLabel(newStatus);
-    const title =
-      newStatus === "PENDING" ? "Sisteme Geri Dahil Et" : "Aşama Değişikliği";
-    const confirmLabel =
-      newStatus === "PENDING" ? "Evet, Dahil Et" : "Evet, Değiştir";
-    // Eğer restore işlemiyse yeşil, diğerleriyse mavi ton
-    const colorClass =
-      newStatus === "PENDING"
-        ? "text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded"
-        : "text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded";
-
     setConfirmation({
       isOpen: true,
       type: "SINGLE_UPDATE",
-      title: title,
-      description: (
-        <div className="text-center">
-          Bu siparişi <strong className={colorClass}>{statusLabel}</strong>{" "}
-          durumuna getirmek istediğinize emin misiniz?
-        </div>
-      ),
-      confirmLabel: confirmLabel,
+      title: "Aşama Değişikliği",
+      description: `Bu siparişi "${statusLabel}" durumuna getirmek istediğine emin misin?`,
+      confirmLabel: "Evet, Değiştir",
       isDangerous: false,
       data: { id, nextStatus: newStatus },
     });
     setActiveMenuId(null);
   };
 
-  // --- 🔥 İŞLEMİ GERÇEKLEŞTİRME (HANDLE CONFIRM) ---
   const handleConfirmAction = async () => {
     if (!confirmation.type) return;
     setIsUpdating(true);
-
     try {
       if (confirmation.type === "SINGLE_CANCEL" && confirmation.data?.id) {
         await bulkUpdateOrderStatus([confirmation.data.id], "CANCELLED");
       } else if (confirmation.type === "BULK_CANCEL") {
         await bulkUpdateOrderStatus(selectedIds, "CANCELLED");
         setSelectedIds([]);
-        setExpandedIds([]);
       } else if (confirmation.type === "BULK_RESTORE") {
         await bulkUpdateOrderStatus(selectedIds, "PENDING");
         setSelectedIds([]);
-        setExpandedIds([]);
       } else if (
         confirmation.type === "BULK_UPDATE" &&
         confirmation.data?.nextStatus
       ) {
         await bulkUpdateOrderStatus(selectedIds, confirmation.data.nextStatus);
         setSelectedIds([]);
-        setExpandedIds([]);
       } else if (
         confirmation.type === "SINGLE_UPDATE" &&
         confirmation.data?.id &&
@@ -399,12 +340,11 @@ export default function OrdersClient({
           confirmation.data.nextStatus
         );
       }
-
       router.refresh();
       setConfirmation({ ...confirmation, isOpen: false });
     } catch (error) {
       console.error(error);
-      alert("Bir hata oluştu.");
+      alert("Hata çıktı knk!");
     } finally {
       setIsUpdating(false);
     }
@@ -415,9 +355,8 @@ export default function OrdersClient({
   return (
     <>
       <div
-        className={`space-y-8 pb-36 transition-all duration-300 ${confirmation.isOpen ? "blur-[2px] grayscale-[0.3] pointer-events-none" : ""}`}
+        className={`space-y-8 pb-36 transition-all duration-300 ${confirmation.isOpen ? "blur-sm pointer-events-none" : ""}`}
       >
-        {/* SEKME MENÜSÜ */}
         <div className="sticky top-0 z-20 bg-[#F9FAFB]/90 backdrop-blur-md pt-4 border-b border-gray-200">
           <nav className="flex space-x-2 overflow-x-auto no-scrollbar px-2 pb-0">
             {TABS.map((tab) => {
@@ -427,8 +366,7 @@ export default function OrdersClient({
                 <button
                   key={tab.id}
                   onClick={() => handleTabChange(tab.id)}
-                  className={`group relative pb-4 px-4 font-medium text-sm flex items-center gap-3 transition-all outline-none whitespace-nowrap
-                    ${isActive ? "text-gray-900" : "text-gray-500 hover:text-gray-700"}`}
+                  className={`group relative pb-4 px-4 font-medium text-sm flex items-center gap-3 transition-all ${isActive ? "text-gray-900" : "text-gray-500 hover:text-gray-700"}`}
                 >
                   <span className="text-base tracking-tight">{tab.label}</span>
                   <span
@@ -447,7 +385,6 @@ export default function OrdersClient({
           </nav>
         </div>
 
-        {/* BİLGİ */}
         <div className="flex items-center justify-between px-2">
           <div className="flex items-center gap-2 text-sm text-gray-500 bg-white px-4 py-2 rounded-full border border-gray-200 shadow-sm">
             <Layers size={14} className="text-indigo-600" />
@@ -456,52 +393,38 @@ export default function OrdersClient({
               <strong className="text-gray-900 font-bold">
                 {orders.length}
               </strong>{" "}
-              sipariş listeleniyor
+              sipariş var knk.
             </span>
           </div>
         </div>
 
-        {/* YÜZEN AKSİYON BARI (Floating Action Bar) */}
         {selectedIds.length > 0 && (
-          <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-10 fade-in duration-300">
-            <div className="bg-white/80 backdrop-blur-xl border border-white/20 shadow-2xl rounded-full p-2 pl-6 flex items-center gap-4 ring-1 ring-gray-900/5">
-              <span className="text-sm font-medium flex items-center gap-2 mr-2 text-gray-700">
-                <span className="w-6 h-6 bg-gray-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                  {selectedIds.length}
-                </span>
-                seçildi
+          <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50">
+            <div className="bg-white/80 backdrop-blur-xl border border-white/20 shadow-2xl rounded-full p-2 pl-6 flex items-center gap-4">
+              <span className="text-sm font-medium">
+                {selectedIds.length} seçildi
               </span>
-
-              <div className="h-6 w-px bg-gray-300 mx-1"></div>
-
-              {/* İPTAL BUTONU (Sadece aktif siparişlerde görünür) */}
+              <div className="h-6 w-px bg-gray-300"></div>
               {currentTab !== "CANCELLED" && currentTab !== "DELIVERED" && (
                 <button
                   onClick={requestBulkCancel}
-                  disabled={isUpdating}
-                  className="bg-red-50 hover:bg-red-100 text-red-600 px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all active:scale-95"
+                  className="bg-red-50 hover:bg-red-100 text-red-600 px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2"
                 >
-                  <Ban size={16} /> İptal Et
+                  <Ban size={16} /> İptal
                 </button>
               )}
-
-              {/* 🔥 RESTORE BUTONU (Sadece İptal sekmesinde görünür) */}
               {currentTab === "CANCELLED" && (
                 <button
                   onClick={requestBulkRestore}
-                  disabled={isUpdating}
-                  className="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all active:scale-95"
+                  className="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2"
                 >
-                  <RefreshCcw size={16} /> Sisteme Dahil Et
+                  <RefreshCcw size={16} /> Geri Yükle
                 </button>
               )}
-
-              {/* İLERLE BUTONU (İptal/Teslim hariç) */}
               {nextAction && (
                 <button
                   onClick={requestBulkUpdate}
-                  disabled={isUpdating}
-                  className={`${nextAction.color} text-white px-6 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all hover:scale-105 active:scale-95`}
+                  className={`${nextAction.color} text-white px-6 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-transform active:scale-95`}
                 >
                   {isUpdating ? (
                     <Loader2 className="animate-spin w-4 h-4" />
@@ -515,29 +438,20 @@ export default function OrdersClient({
           </div>
         )}
 
-        {/* TABLO */}
         <div className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-visible">
           {orders.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-32 text-center bg-gray-50/50">
-              <div className="bg-white p-6 rounded-full mb-4 shadow-sm border border-gray-100">
-                <Package size={48} className="text-gray-300" />
-              </div>
+            <div className="py-32 text-center">
+              <Package size={48} className="text-gray-300 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-gray-900">
-                Sipariş Bulunamadı
+                Bomboş Buralar...
               </h3>
-              <p className="text-gray-500 mt-2 max-w-xs">
-                Bu kategoride şu an işlem bekleyen bir sipariş yok.
-              </p>
             </div>
           ) : (
             <table className="w-full text-left text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 uppercase tracking-wider text-[11px] font-bold">
+              <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 text-[11px] font-bold uppercase tracking-wider">
                 <tr>
                   <th className="p-5 w-14 text-center">
-                    <button
-                      onClick={toggleSelectAll}
-                      className="opacity-70 hover:opacity-100 transition-opacity"
-                    >
+                    <button onClick={toggleSelectAll}>
                       {selectedIds.length === orders.length ? (
                         <CheckSquare size={20} className="text-indigo-600" />
                       ) : (
@@ -550,8 +464,8 @@ export default function OrdersClient({
                   <th className="p-5">Müşteri</th>
                   <th className="p-5 text-right">Tutar</th>
                   <th className="p-5 text-right">Tarih</th>
-                  <th className="p-5 text-center w-14"></th>
-                  <th className="p-5 text-center w-14"></th>
+                  <th className="p-5 w-14"></th>
+                  <th className="p-5 w-14 text-center pr-6">İşlem</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -559,51 +473,16 @@ export default function OrdersClient({
                   const isSelected = selectedIds.includes(order.id);
                   const isExpanded = expandedIds.includes(order.id);
                   const isMenuOpen = activeMenuId === order.id;
-                  const previewItems = order.items.slice(0, 2);
-                  const remainingCount = order.items.length - 2;
                   const nextStatus = getNextStatus(order.status);
                   const prevStatus = getPrevStatus(order.status);
-
-                  const CustomerLink = ({
-                    children,
-                  }: {
-                    children: React.ReactNode;
-                  }) => {
-                    if (order.userId) {
-                      return (
-                        <Link
-                          href={`/admin/users/${order.userId}`}
-                          className="group/link flex items-center gap-3 hover:bg-gray-50 p-1.5 rounded-xl -ml-1.5 transition-colors"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {children}
-                          <ExternalLink
-                            size={12}
-                            className="text-gray-300 group-hover/link:text-indigo-500 opacity-0 group-hover/link:opacity-100 transition-all"
-                          />
-                        </Link>
-                      );
-                    }
-                    return (
-                      <div className="flex items-center gap-3 p-1.5">
-                        {children}
-                      </div>
-                    );
-                  };
 
                   return (
                     <Fragment key={order.id}>
                       <tr
-                        className={`group transition-all duration-200 hover:bg-gray-50 ${isSelected ? "bg-indigo-50/40" : "bg-white"} ${isExpanded ? "bg-gray-50" : ""}`}
+                        className={`group transition-all hover:bg-gray-50 ${isSelected ? "bg-indigo-50/40" : "bg-white"}`}
                       >
-                        <td className="p-5 text-center relative">
-                          {isSelected && (
-                            <div className="absolute left-0 top-3 bottom-3 w-1 rounded-r-full bg-indigo-500" />
-                          )}
-                          <button
-                            onClick={() => toggleSelect(order.id)}
-                            className="text-gray-400 group-hover:text-indigo-600 transition-colors"
-                          >
+                        <td className="p-5 text-center">
+                          <button onClick={() => toggleSelect(order.id)}>
                             {isSelected ? (
                               <CheckSquare
                                 size={20}
@@ -614,115 +493,74 @@ export default function OrdersClient({
                             )}
                           </button>
                         </td>
-
                         <td
                           className="p-5 pl-2 cursor-pointer"
                           onClick={(e) => toggleDetails(order.id, e)}
                         >
                           <div className="flex flex-col gap-2">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-mono text-[10px] font-bold text-gray-500 bg-white px-2 py-0.5 rounded border border-gray-200 shadow-sm">
-                                #
-                                <Highlight
-                                  text={order.id.slice(-6).toUpperCase()}
-                                  query={searchQuery}
-                                />
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {previewItems.map((item) => (
-                                <div
-                                  key={item.id}
-                                  className="relative w-8 h-8 bg-gray-100 rounded-lg overflow-hidden border border-gray-200"
-                                >
-                                  {item.product.images[0]?.url ? (
-                                    <Image
-                                      src={item.product.images[0].url}
-                                      alt="img"
-                                      fill
-                                      className="object-cover"
-                                    />
-                                  ) : (
-                                    <div className="flex items-center justify-center h-full">
-                                      <Package
-                                        size={12}
-                                        className="text-gray-400"
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                              {remainingCount > 0 && (
-                                <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">
-                                  +{remainingCount}
+                            <span className="font-mono text-[10px] font-bold text-gray-500 bg-white px-2 py-0.5 rounded border shadow-sm w-fit">
+                              #
+                              <Highlight
+                                text={order.id.slice(-6).toUpperCase()}
+                                query={searchQuery}
+                              />
+                            </span>
+                            <span className="font-bold text-gray-900">
+                              <Highlight
+                                text={
+                                  order.items[0]?.product.name ||
+                                  "Silinmiş Ürün"
+                                }
+                                query={searchQuery}
+                              />{" "}
+                              {order.items.length > 1 && (
+                                <span className="text-gray-400 font-normal">
+                                  ...
                                 </span>
                               )}
-                              <span className="text-sm font-medium text-gray-900 ml-2 line-clamp-1">
-                                <Highlight
-                                  text={previewItems[0]?.product.name}
-                                  query={searchQuery}
-                                />
-                                {order.items.length > 1 && (
-                                  <span className="text-gray-400 font-normal">
-                                    {" "}
-                                    ve diğerleri...
-                                  </span>
-                                )}
-                              </span>
-                            </div>
+                            </span>
                           </div>
                         </td>
-
                         <td className="p-5 text-center">
                           <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-sm font-bold text-gray-700">
                             {order.totalQuantity}
                           </span>
                         </td>
-
                         <td className="p-5">
-                          <CustomerLink>
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-gray-600 font-bold text-xs shadow-inner">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
                               {order.customerName.charAt(0).toUpperCase()}
                             </div>
                             <div className="flex flex-col">
-                              <span
-                                className={`font-bold text-sm ${order.userId ? "text-indigo-700" : "text-gray-900"}`}
-                              >
+                              <span className="font-bold text-sm text-gray-900">
                                 <Highlight
                                   text={order.customerName}
                                   query={searchQuery}
                                 />
                               </span>
                               <span className="text-[10px] text-gray-500">
-                                {order.userId ? "Kayıtlı Üye" : "Misafir"}
+                                {order.userId ? "Kayıtlı" : "Misafir"}
                               </span>
                             </div>
-                          </CustomerLink>
+                          </div>
                         </td>
-
-                        <td className="p-5 text-right">
-                          <span className="font-bold text-gray-900 text-base tabular-nums">
-                            {new Intl.NumberFormat("tr-TR", {
-                              style: "currency",
-                              currency: "TRY",
-                            }).format(order.total)}
-                          </span>
+                        <td className="p-5 text-right font-bold text-gray-900 tabular-nums text-base">
+                          {new Intl.NumberFormat("tr-TR", {
+                            style: "currency",
+                            currency: "TRY",
+                          }).format(order.total)}
                         </td>
-                        <td className="p-5 text-right">
-                          <span className="text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-md">
-                            {order.createdAt}
-                          </span>
+                        <td className="p-5 text-right text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-md w-fit ml-auto mr-5">
+                          {order.createdAt}
                         </td>
-
                         <td className="p-5 text-center">
                           <button
                             onClick={(e) => toggleDetails(order.id, e)}
-                            className={`p-2 rounded-full transition-all duration-200 ${isExpanded ? "bg-indigo-100 text-indigo-600 rotate-180" : "hover:bg-gray-100 text-gray-400 hover:text-gray-700"}`}
+                            className={`p-2 rounded-full transition-all ${isExpanded ? "bg-indigo-100 text-indigo-600 rotate-180" : "text-gray-400"}`}
                           >
                             <ChevronDown size={20} />
                           </button>
                         </td>
-
                         <td className="p-5 text-center pr-6 relative">
                           <button
                             onClick={(e) => toggleMenu(order.id, e)}
@@ -730,75 +568,55 @@ export default function OrdersClient({
                           >
                             <MoreVertical size={20} />
                           </button>
-
                           {isMenuOpen && (
                             <div
                               ref={menuRef}
-                              className="absolute right-8 top-8 z-50 w-60 bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)] border border-gray-100 p-1.5 animate-in fade-in zoom-in-95 duration-200 origin-top-right ring-1 ring-black/5"
+                              className="absolute right-10 top-10 z-50 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 animate-in fade-in zoom-in-95 origin-top-right"
                             >
-                              <div className="flex flex-col gap-0.5">
-                                <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider pl-4">
-                                  İşlemler
-                                </div>
-                                {nextStatus && (
-                                  <button
-                                    onClick={() =>
-                                      requestSingleUpdate(order.id, nextStatus)
-                                    }
-                                    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-colors text-left group/btn"
-                                  >
-                                    <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover/btn:bg-indigo-100 transition-colors">
-                                      {nextStatus === "SHIPPED" && (
-                                        <Truck size={16} />
-                                      )}
-                                      {nextStatus === "DELIVERED" && (
-                                        <CheckCircle2 size={16} />
-                                      )}
-                                      {nextStatus === "PROCESSING" && (
-                                        <Box size={16} />
-                                      )}
-                                    </div>
-                                    <span>Sonraki Aşama</span>
-                                  </button>
-                                )}
-                                {prevStatus && (
-                                  <button
-                                    onClick={() =>
-                                      requestSingleUpdate(order.id, prevStatus)
-                                    }
-                                    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-amber-50 hover:text-amber-700 rounded-xl transition-colors text-left group/btn"
-                                  >
-                                    <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center group-hover/btn:bg-amber-100 transition-colors">
-                                      <Undo2 size={16} />
-                                    </div>
-                                    <span>Önceki Aşama</span>
-                                  </button>
-                                )}
-                                <div className="h-px bg-gray-100 my-1 mx-2" />
-                                {order.status !== "CANCELLED" &&
-                                  order.status !== "DELIVERED" && (
-                                    <button
-                                      onClick={() =>
-                                        requestSingleCancel(order.id)
-                                      }
-                                      className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors text-left"
-                                    >
-                                      <Ban size={16} />{" "}
-                                      <span>Siparişi İptal Et</span>
-                                    </button>
-                                  )}
-                                {order.status === "CANCELLED" && (
-                                  <button
-                                    onClick={() =>
-                                      requestSingleUpdate(order.id, "PENDING")
-                                    }
-                                    className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors text-left"
-                                  >
-                                    <RefreshCcw size={16} />{" "}
-                                    <span>Sisteme Dahil Et</span>
-                                  </button>
-                                )}
+                              <div className="text-[10px] font-bold text-gray-400 p-2 uppercase tracking-widest pl-4">
+                                İşlemler
                               </div>
+                              {nextStatus && (
+                                <button
+                                  onClick={() =>
+                                    requestSingleUpdate(order.id, nextStatus)
+                                  }
+                                  className="w-full flex items-center gap-3 p-3 text-sm font-semibold text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-colors text-left group/btn"
+                                >
+                                  <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover/btn:bg-indigo-100 transition-colors">
+                                    {nextStatus === "SHIPPED" && (
+                                      <Truck size={16} />
+                                    )}
+                                    {nextStatus === "DELIVERED" && (
+                                      <CheckCircle2 size={16} />
+                                    )}
+                                    {nextStatus === "PROCESSING" && (
+                                      <Box size={16} />
+                                    )}
+                                  </div>
+                                  <span>Sonraki Aşama</span>
+                                </button>
+                              )}
+                              {prevStatus && (
+                                <button
+                                  onClick={() =>
+                                    requestSingleUpdate(order.id, prevStatus)
+                                  }
+                                  className="w-full flex items-center gap-3 p-3 text-sm font-semibold text-gray-700 hover:bg-amber-50 hover:text-amber-700 rounded-xl transition-colors text-left group/btn"
+                                >
+                                  <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center group-hover/btn:bg-amber-100 transition-colors">
+                                    <Undo2 size={16} />
+                                  </div>
+                                  <span>Önceki Aşama</span>
+                                </button>
+                              )}
+                              <div className="h-px bg-gray-100 my-1 mx-2" />
+                              <button
+                                onClick={() => requestSingleCancel(order.id)}
+                                className="w-full flex items-center gap-3 p-3 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-xl transition-colors text-left"
+                              >
+                                <Ban size={16} /> Siparişi İptal Et
+                              </button>
                             </div>
                           )}
                         </td>
@@ -806,36 +624,26 @@ export default function OrdersClient({
 
                       {isExpanded && (
                         <tr className="bg-gray-50/50 shadow-inner">
-                          <td
-                            colSpan={8}
-                            className="p-0 border-b border-gray-200"
-                          >
-                            <div className="p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in slide-in-from-top-4">
+                          <td colSpan={8} className="p-8 border-b">
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in slide-in-from-top-4">
                               <div className="lg:col-span-8 space-y-4">
                                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                                   <Package size={14} /> Sipariş Ürünleri
                                 </h4>
                                 <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-                                  {order.items.map((item, idx) => (
+                                  {order.items.map((item) => (
                                     <div
                                       key={item.id}
-                                      className={`flex gap-6 p-5 ${idx !== order.items.length - 1 ? "border-b border-gray-50" : ""}`}
+                                      className="flex gap-6 p-5 border-b last:border-0"
                                     >
-                                      <div className="relative w-20 h-20 bg-gray-50 rounded-xl overflow-hidden shrink-0 border border-gray-100">
-                                        {item.product.images[0]?.url ? (
+                                      <div className="relative w-16 h-16 bg-gray-50 rounded-xl overflow-hidden shrink-0 border">
+                                        {item.product.images[0]?.url && (
                                           <Image
                                             src={item.product.images[0].url}
-                                            alt={item.product.name}
+                                            alt="img"
                                             fill
                                             className="object-cover"
                                           />
-                                        ) : (
-                                          <div className="flex items-center justify-center h-full">
-                                            <Package
-                                              size={24}
-                                              className="text-gray-300"
-                                            />
-                                          </div>
                                         )}
                                       </div>
                                       <div className="flex flex-col justify-center flex-1">
@@ -845,14 +653,12 @@ export default function OrdersClient({
                                             query={searchQuery}
                                           />
                                         </span>
-                                        <div className="flex items-center gap-3 mt-2">
-                                          <span className="flex items-center gap-1 text-[10px] font-mono text-gray-400 bg-gray-50 px-2 py-1 rounded border border-gray-100">
-                                            <Fingerprint size={10} /> {item.id}
-                                          </span>
+                                        <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-400 font-mono bg-gray-50 px-2 py-0.5 rounded w-fit">
+                                          <Fingerprint size={10} /> {item.id}
                                         </div>
                                       </div>
-                                      <div className="flex flex-col items-end justify-center">
-                                        <span className="text-sm font-bold text-gray-900 bg-gray-100 px-4 py-2 rounded-xl border border-gray-200">
+                                      <div className="flex items-center">
+                                        <span className="text-sm font-bold bg-gray-100 px-4 py-2 rounded-xl border">
                                           x{item.quantity}
                                         </span>
                                       </div>
@@ -864,77 +670,62 @@ export default function OrdersClient({
                                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                                   <User size={14} /> Müşteri & Teslimat
                                 </h4>
-                                <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-6">
-                                  <div className="pb-6 border-b border-gray-100">
-                                    <CustomerLink>
-                                      <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xl mb-2">
-                                        {order.customerName
-                                          .charAt(0)
-                                          .toUpperCase()}
-                                      </div>
-                                      <div>
-                                        <div
-                                          className={`font-bold text-lg ${order.userId ? "text-indigo-700" : "text-gray-900"}`}
-                                        >
-                                          <Highlight
-                                            text={order.customerName}
-                                            query={searchQuery}
-                                          />
-                                        </div>
-                                        <div className="text-xs text-gray-500 font-medium">
-                                          Müşteri Profili Görüntüle
-                                        </div>
-                                      </div>
-                                    </CustomerLink>
+                                <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-5">
+                                  {order.userId && (
+                                    <Link
+                                      href={`/admin/users/${order.userId}`}
+                                      className="flex items-center gap-3 p-3 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-colors"
+                                    >
+                                      <ExternalLink size={14} /> Müşteri
+                                      Profiline Git
+                                    </Link>
+                                  )}
+                                  <div className="flex gap-4">
+                                    <div className="p-2 bg-gray-50 rounded-lg h-fit">
+                                      <Mail
+                                        size={16}
+                                        className="text-gray-500"
+                                      />
+                                    </div>
+                                    <div className="flex flex-col text-xs">
+                                      <span className="font-bold text-gray-400 uppercase">
+                                        E-posta
+                                      </span>
+                                      <span className="font-medium text-gray-900 break-all">
+                                        {order.customerEmail || "-"}
+                                      </span>
+                                    </div>
                                   </div>
-                                  <div className="space-y-4">
-                                    <div className="flex gap-4">
-                                      <div className="mt-0.5 p-2 bg-gray-50 rounded-lg">
-                                        <Mail
-                                          size={16}
-                                          className="text-gray-500"
-                                        />
-                                      </div>
-                                      <div>
-                                        <div className="text-xs font-bold text-gray-400 uppercase">
-                                          E-posta
-                                        </div>
-                                        <div className="text-sm font-medium text-gray-900 break-all">
-                                          {order.customerEmail || "-"}
-                                        </div>
-                                      </div>
+                                  <div className="flex gap-4">
+                                    <div className="p-2 bg-gray-50 rounded-lg h-fit">
+                                      <Phone
+                                        size={16}
+                                        className="text-gray-500"
+                                      />
                                     </div>
-                                    <div className="flex gap-4">
-                                      <div className="mt-0.5 p-2 bg-gray-50 rounded-lg">
-                                        <Phone
-                                          size={16}
-                                          className="text-gray-500"
-                                        />
-                                      </div>
-                                      <div>
-                                        <div className="text-xs font-bold text-gray-400 uppercase">
-                                          Telefon
-                                        </div>
-                                        <div className="text-sm font-medium text-gray-900">
-                                          {order.customerPhone || "-"}
-                                        </div>
-                                      </div>
+                                    <div className="flex flex-col text-xs">
+                                      <span className="font-bold text-gray-400 uppercase">
+                                        Telefon
+                                      </span>
+                                      <span className="font-medium text-gray-900">
+                                        {order.customerPhone || "-"}
+                                      </span>
                                     </div>
-                                    <div className="flex gap-4">
-                                      <div className="mt-0.5 p-2 bg-gray-50 rounded-lg">
-                                        <MapPin
-                                          size={16}
-                                          className="text-gray-500"
-                                        />
-                                      </div>
-                                      <div>
-                                        <div className="text-xs font-bold text-gray-400 uppercase">
-                                          Adres
-                                        </div>
-                                        <div className="text-sm font-medium text-gray-900 leading-relaxed">
-                                          {order.address || "-"}
-                                        </div>
-                                      </div>
+                                  </div>
+                                  <div className="flex gap-4">
+                                    <div className="p-2 bg-gray-50 rounded-lg h-fit">
+                                      <MapPin
+                                        size={16}
+                                        className="text-gray-500"
+                                      />
+                                    </div>
+                                    <div className="flex flex-col text-xs">
+                                      <span className="font-bold text-gray-400 uppercase">
+                                        Adres
+                                      </span>
+                                      <span className="font-medium text-gray-900 leading-relaxed">
+                                        {order.address || "-"}
+                                      </span>
                                     </div>
                                   </div>
                                 </div>
@@ -952,82 +743,45 @@ export default function OrdersClient({
         </div>
       </div>
 
-      {/* --- PREMİUM ONAY MODALI (MERKEZİ) --- */}
       {confirmation.isOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-white rounded-[2rem] shadow-2xl p-8 max-w-md w-full mx-6 border border-white/20 animate-in zoom-in-95 slide-in-from-bottom-8 duration-300 relative overflow-hidden">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl p-8 max-w-sm w-full text-center animate-in zoom-in-95 origin-center">
             <div
-              className={`absolute top-0 left-0 w-full h-2 opacity-50 
-              ${
-                confirmation.isDangerous
-                  ? "bg-red-500"
-                  : confirmation.type === "BULK_RESTORE" ||
-                      (confirmation.type === "SINGLE_UPDATE" &&
-                        confirmation.confirmLabel === "Evet, Dahil Et") // Yeşil şerit
-                    ? "bg-emerald-500"
-                    : "bg-indigo-500"
-              }`}
-            />
-
-            <div className="flex flex-col items-center text-center">
-              <div
-                className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 shadow-xl 
-                ${
-                  confirmation.isDangerous
-                    ? "bg-red-50 text-red-500 shadow-red-100"
-                    : confirmation.type === "BULK_RESTORE" ||
-                        (confirmation.type === "SINGLE_UPDATE" &&
-                          confirmation.confirmLabel === "Evet, Dahil Et")
-                      ? "bg-emerald-50 text-emerald-500 shadow-emerald-100"
-                      : "bg-indigo-50 text-indigo-500 shadow-indigo-100"
-                }`}
+              className={`w-20 h-20 rounded-full mx-auto flex items-center justify-center mb-6 shadow-lg ${confirmation.isDangerous ? "bg-red-50 text-red-500 shadow-red-100" : "bg-indigo-50 text-indigo-500 shadow-indigo-100"}`}
+            >
+              {confirmation.isDangerous ? (
+                <AlertTriangle size={40} />
+              ) : (
+                <Info size={40} />
+              )}
+            </div>
+            <h3 className="text-2xl font-black text-gray-900 mb-2">
+              {confirmation.title}
+            </h3>
+            <p className="text-gray-500 mb-8 px-4 leading-relaxed">
+              {confirmation.description}
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() =>
+                  setConfirmation({ ...confirmation, isOpen: false })
+                }
+                disabled={isUpdating}
+                className="py-4 font-bold text-gray-700 bg-white hover:bg-gray-50 rounded-2xl border-2 border-gray-100 transition-all active:scale-95"
               >
-                {confirmation.isDangerous ? (
-                  <AlertTriangle size={36} strokeWidth={2.5} />
+                Vazgeç
+              </button>
+              <button
+                onClick={handleConfirmAction}
+                disabled={isUpdating}
+                className={`py-4 rounded-2xl text-white font-bold transition-all active:scale-95 flex items-center justify-center ${confirmation.isDangerous ? "bg-red-600 hover:bg-red-700 shadow-red-200" : "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200"}`}
+              >
+                {isUpdating ? (
+                  <Loader2 className="animate-spin" />
                 ) : (
-                  <Info size={36} strokeWidth={2.5} />
+                  confirmation.confirmLabel
                 )}
-              </div>
-
-              <h3 className="text-2xl font-black text-gray-900 mb-3 tracking-tight">
-                {confirmation.title}
-              </h3>
-              <div className="text-gray-500 text-base mb-8 leading-relaxed px-4">
-                {confirmation.description}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 w-full">
-                <button
-                  onClick={() =>
-                    setConfirmation({ ...confirmation, isOpen: false })
-                  }
-                  disabled={isUpdating}
-                  className="w-full bg-white hover:bg-gray-50 text-gray-700 font-bold py-4 px-4 rounded-2xl border-2 border-gray-100 transition-all active:scale-95"
-                >
-                  Vazgeç
-                </button>
-                <button
-                  onClick={handleConfirmAction}
-                  disabled={isUpdating}
-                  className={`w-full font-bold py-4 px-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2 text-white shadow-xl hover:shadow-2xl
-                    ${
-                      confirmation.isDangerous
-                        ? "bg-red-600 hover:bg-red-700 shadow-red-200"
-                        : confirmation.type === "BULK_RESTORE" ||
-                            (confirmation.type === "SINGLE_UPDATE" &&
-                              confirmation.confirmLabel === "Evet, Dahil Et")
-                          ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200"
-                          : "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200"
-                    }
-                  `}
-                >
-                  {isUpdating ? (
-                    <Loader2 className="animate-spin w-5 h-5" />
-                  ) : (
-                    confirmation.confirmLabel
-                  )}
-                </button>
-              </div>
+              </button>
             </div>
           </div>
         </div>

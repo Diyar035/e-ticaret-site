@@ -35,7 +35,7 @@ enum OrderStatus {
 }
 
 // --------------------------------------
-// 3. AUTH & USER MANAGEMENT (NextAuth)
+// 3. AUTH & USER MANAGEMENT
 // --------------------------------------
 
 model User {
@@ -48,30 +48,27 @@ model User {
   passwordHash  String?
   role          Role      @default(USER)
   phoneNumber   String?
-   
+  
   addresses     Address[]
   accounts      Account[]
   sessions      Session[]
   orders        Order[]
   favorites     Favorite[]
-   
-  // KULLANICI SÖZLEŞMESİ BAĞLANTISI
   userAgreement UserAgreement?
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
 
-// KULLANICI SÖZLEŞMESİ
 model UserAgreement {
   id        String    @id @default(cuid())
   userId    String    @unique
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-   
-  isSigned  Boolean   @default(false) 
-  signedAt  DateTime? @default(now()) 
-  version   String    @default("v1")  
-  ipAddress String?                   
+  
+  isSigned  Boolean   @default(false)
+  signedAt  DateTime? @default(now())
+  version   String    @default("v1")
+  ipAddress String?
 }
 
 model Account {
@@ -104,15 +101,15 @@ model Address {
   id          String   @id @default(cuid())
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-   
-  title       String   
+  
+  title       String
   firstName   String
   lastName    String
-  phone       String   
+  phone       String
   addressLine String   @db.Text
-  city        String   
-  district    String   
-  zipCode     String?  
+  city        String
+  district    String
+  zipCode     String?
   country     String   @default("Türkiye")
   isDefault   Boolean  @default(false)
 
@@ -121,7 +118,7 @@ model Address {
 }
 
 // --------------------------------------
-// 4. PRODUCT CATALOG (Base)
+// 4. PRODUCT CATALOG
 // --------------------------------------
 
 model Category {
@@ -131,7 +128,7 @@ model Category {
   parentId  String?
   parent    Category? @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children  Category[] @relation("CategoryHierarchy")
-   
+  
   products    Product[]
   brands      Brand[]    @relation("CategoryToBrand")
   attributes  Attribute[]
@@ -145,7 +142,7 @@ model Brand {
   name       String   @unique
   slug       String   @unique
   logo       String?
-   
+  
   products   Product[]
   categories Category[] @relation("CategoryToBrand")
 
@@ -157,18 +154,19 @@ model Product {
   id          String    @id @default(cuid())
   name        String
   description String?   @db.Text
+  // NOT: Decimal tipi frontend'de .toNumber() gerektirir.
   price       Decimal   @db.Decimal(10, 2)
   salePrice   Decimal?  @db.Decimal(10, 2)
   stock       Int       @default(0)
   isActive    Boolean   @default(true)
   isArchived  Boolean   @default(false)
-   
+  
   categoryId  String
   category    Category  @relation(fields: [categoryId], references: [id])
-   
+  
   brandId     String?
   brand       Brand?    @relation(fields: [brandId], references: [id])
-   
+  
   images           ProductImage[]
   variants         ProductVariant[]
   attributeValues  ProductAttributeValue[]
@@ -188,34 +186,30 @@ model ProductImage {
 }
 
 // --------------------------------------
-// 5. ADVANCED VARIANTS & ATTRIBUTES
+// 5. VARIANTS & ATTRIBUTES
 // --------------------------------------
 
 model ProductVariant {
   id        String   @id @default(cuid())
   productId String
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-   
+  
   name      String   
   color     String?  
   size      String?  
   stock     Int      @default(0) 
   price     Decimal? @db.Decimal(10, 2) 
-  image     String? 
+  image     String?  
 }
 
-// --- DÜZELTİLEN KISIM BURASI ---
 model Attribute {
   id          String    @id @default(cuid())
   name        String    
-  
-  // Soru işareti (?) ekleyerek bunları opsiyonel yaptık
   categoryId  String?
   category    Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-   
+  
   values      ProductAttributeValue[]
 }
-// ------------------------------
 
 model ProductAttributeValue {
   id          String    @id @default(cuid())
@@ -234,17 +228,17 @@ model Order {
   id            String      @id @default(cuid())
   userId        String?
   user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
-   
+  
   total         Decimal     @db.Decimal(10, 2)
   status        OrderStatus @default(PENDING)
-   
+  
   customerName  String
   customerEmail String
   address       String?     @db.Text
   cancelReason  String?
-   
+  
   items         OrderItem[]
-   
+  
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 }
@@ -313,6 +307,6 @@ model AuditLog {
   adminEmail String?
   ipAddress  String?  
   userAgent  String?  
-   
+  
   createdAt  DateTime @default(now())
 }

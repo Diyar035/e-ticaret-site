@@ -4,18 +4,16 @@ import { prisma } from "@/lib/prisma-client";
 import { OrderStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
-// --- TİP TANIMLAMALARI (Dönüş Değerleri İçin) ---
+// İşlem sonuçlarını geri döndürmek için kullandığımız tip
 type ActionResponse = {
   success: boolean;
   message: string;
-  count?: number; // Kaç kayıt güncellendiğini bilmek istersek
+  count?: number;
 };
 
 /**
- * ------------------------------------------------------------------
- * TOPLU SİPARİŞ DURUMU GÜNCELLEME (BULK UPDATE)
- * ------------------------------------------------------------------
- * Seçilen birden fazla siparişi tek seferde günceller.
+ * Birden fazla siparişi aynı anda güncelliyoruz
+ * Panonun solundaki kutucukları seçip toplu işlem yapınca burası çalışıyor
  */
 export async function bulkUpdateOrderStatus(
   orderIds: string[],
@@ -23,58 +21,59 @@ export async function bulkUpdateOrderStatus(
 ): Promise<ActionResponse> {
   try {
     if (!orderIds || orderIds.length === 0) {
-      return { success: false, message: "Hiçbir sipariş seçilmedi." };
+      return { success: false, message: "Hacı hiçbir sipariş seçmedin ki!" };
     }
 
-    // Veritabanında güncelleme işlemi
+    // Seçilen tüm ID'leri veritabanında bulup yeni statüyü basıyoruz
     const result = await prisma.order.updateMany({
       where: {
-        id: { in: orderIds }, // ID'si bu listenin içinde olanları bul
+        id: { in: orderIds },
       },
       data: {
         status: newStatus,
       },
     });
 
-    // Sayfayı yenile (Önbelleği temizle)
+    // Sayfalar güncellensin, eski veri kalmasın diye buraları tazeliyoruz
     revalidatePath("/admin/orders");
-    revalidatePath("/admin/dashboard"); // Dashboard da güncellensin
+    revalidatePath("/admin/dashboard");
 
     return {
       success: true,
-      message: `${result.count} sipariş başarıyla ${newStatus} durumuna getirildi.`,
+      message: `${result.count} tane sipariş artık ${newStatus} durumunda.`,
       count: result.count,
     };
   } catch (error) {
-    console.error("Toplu güncelleme hatası:", error);
+    console.error("Toplu güncelleme yaparken patladık:", error);
     return {
       success: false,
-      message: "İşlem sırasında sunucu tarafında bir hata oluştu.",
+      message:
+        "Sunucu tarafında bir şeyler ters gitti, toplu güncelleme olmadı.",
     };
   }
 }
 
 /**
- * ------------------------------------------------------------------
- * TEKLİ SİPARİŞ DURUMU GÜNCELLEME (SINGLE UPDATE)
- * ------------------------------------------------------------------
- * Tek bir siparişin durumunu değiştirmek için.
+ * Tek bir siparişin durumunu değiştiren fonksiyon
+ * Detay sayfasındaki butonlara basınca aslında burayı çağırıyoruz
  */
 export async function updateOrderStatus(
   orderId: string,
   newStatus: OrderStatus
 ): Promise<ActionResponse> {
   try {
+    // ID'yi bulup durumu set ediyoruz
     await prisma.order.update({
       where: { id: orderId },
       data: { status: newStatus },
     });
 
+    // Değişikliği anında görelim diye yolu tazeleyelim
     revalidatePath("/admin/orders");
 
-    return { success: true, message: "Sipariş durumu güncellendi." };
+    return { success: true, message: "Siparişin durumu mis gibi güncellendi." };
   } catch (error) {
-    console.error("Tekli güncelleme hatası:", error);
-    return { success: false, message: "Güncelleme başarısız oldu." };
+    console.error("Tekli güncelleme hatası aldık:", error);
+    return { success: false, message: "Maalesef durumu güncelleyemedik." };
   }
 }

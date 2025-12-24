@@ -10,7 +10,7 @@ export async function POST(req: Request) {
       return new NextResponse("İsim gerekli", { status: 400 });
     }
 
-    // Artık categoryId vermeden özellik oluşturabilirsin
+    // Artık categoryId vermeden özellik oluşturabiliyoruz
     const attribute = await prisma.attribute.create({
       data: {
         name,
