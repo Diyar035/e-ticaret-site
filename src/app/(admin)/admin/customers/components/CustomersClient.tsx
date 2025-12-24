@@ -1,49 +1,46 @@
 "use client";
 
 import { useState } from "react";
-import { User } from "@prisma/client";
 import CustomersToolbar from "./CustomersToolbar";
 import CustomersTable from "./CustomersTable";
 
-// Bu interface sayesinde 'data' prop'unu kabul ediyoruz
-interface CustomersClientProps {
-  data: User[];
+// Proje genelinde kullanılacak temiz Müşteri Tipi
+export interface Customer {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  createdAt: string;
 }
 
-export default function CustomersClient({ data }: CustomersClientProps) {
+export default function CustomersClient({ data = [] }: { data: Customer[] }) {
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedIds(data.map((u) => u.id));
-    } else {
-      setSelectedIds([]);
-    }
-  };
-
-  const handleSelectOne = (id: string, checked: boolean) => {
-    if (checked) {
-      setSelectedIds((prev) => [...prev, id]);
-    } else {
-      setSelectedIds((prev) => prev.filter((item) => item !== id));
-    }
-  };
+  // Filtreleme (İsim, Mail veya Telefon)
+  const filtered = data.filter(
+    (c) =>
+      (c.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (c.email || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (c.phone || "").includes(searchTerm)
+  );
 
   return (
-    <div className="space-y-6">
-      <CustomersToolbar selectedIds={selectedIds} />
-      <CustomersTable
-        data={data}
-        selectedIds={selectedIds}
-        onSelectAll={handleSelectAll}
-        onSelectOne={handleSelectOne}
-      />
-
-      {selectedIds.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-xl text-sm font-medium z-50 animate-in fade-in slide-in-from-bottom-4">
-          {selectedIds.length} müşteri seçildi
-        </div>
-      )}
+    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-12 pb-40">
+      <div className="max-w-7xl mx-auto space-y-10">
+        <CustomersToolbar
+          data={filtered}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          selectedIds={selectedIds}
+          onClear={() => setSelectedIds([])}
+        />
+        <CustomersTable
+          data={filtered}
+          selectedIds={selectedIds}
+          setSelectedIds={setSelectedIds}
+        />
+      </div>
     </div>
   );
 }

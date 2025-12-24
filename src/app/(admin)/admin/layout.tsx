@@ -1,17 +1,21 @@
-import { getSidebarStats } from "@/lib/actions/sidebar-actions"; // Önceki adımda yazdığımız action
-import AdminLayoutClient from "@/components/admin/AdminLayoutClient"; // Yukarıdaki yeni bileşen
+import { getSidebarStats } from "@/lib/actions/sidebar-actions";
+import AdminLayoutClient from "@/components/admin/AdminLayoutClient";
 
+/**
+ * @description Admin Paneli Ana Düzeni
+ * @note TSX formatında yazılmıştır, div ve component etiketleri içerir.
+ */
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // 1. Veritabanından canlı istatistikleri çek (Server-Side)
-  // Login sayfasındaysak bile çekebiliriz, sorun olmaz.
-  // Performans takıntın varsa pathname kontrolü burada yapılamaz (Layout statiktir),
-  // ama veritabanı sorgusu çok hafif olduğu için sorun yok.
+  // 1. Veritabanından istatistikleri çek (Server-Side)
   const stats = await getSidebarStats();
 
-  // 2. Client bileşeni render et ve veriyi gönder
-  return <AdminLayoutClient stats={stats}>{children}</AdminLayoutClient>;
+  return (
+    <AdminLayoutClient stats={stats}>
+      <div className="min-h-screen bg-white">{children}</div>
+    </AdminLayoutClient>
+  );
 }

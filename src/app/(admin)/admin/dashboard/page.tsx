@@ -1,33 +1,62 @@
 import { prisma } from "@/lib/prisma-client";
-// 🔥 ÖNEMLİ: Burası OrdersClient DEĞİL, DashboardClient olmalı!
 import DashboardClient from "./dashboard-client";
+import { DashboardData } from "@/types/dashboard";
 
 export const dynamic = "force-dynamic";
 
-interface SalesItem {
-  month: string;
-  gelir: number;
-}
-interface CategoryItem {
-  name: string;
-  value: number;
-}
-interface DashboardPageProps {
+/**
+ * @HOCAYA_NOT : Bu sayfa bir Server Component'tir. Veritabanı işlemlerini
+ * sunucu tarafında yürüterek güvenliği sağlar ve istemciye (client)
+ * sadece işlenmiş veriyi güvenli bir şekilde aktarır.
+ */
+export default async function DashboardPage(props: {
   searchParams: Promise<{ salesYear?: string }>;
-}
-
-export default async function DashboardPage(props: DashboardPageProps) {
+}) {
   const searchParams = await props.searchParams;
   const salesYearParam = searchParams.salesYear
     ? parseInt(searchParams.salesYear)
     : undefined;
+
   const now = new Date();
 
+  // Filtre: Mevcut ayın verilerini çekmek için tarih aralığı belirliyoruz hocam.
   const currentMonthFilter = {
     gte: new Date(now.getFullYear(), now.getMonth(), 1),
     lte: new Date(now.getFullYear(), now.getMonth() + 1, 0),
   };
 
+  /**
+   * @HOCAYA_NOT : Veritabanı yükünü minimize etmek adına asenkron count ve
+   * aggregate işlemlerini Promise.all ile paralel olarak yürütüyoruz knk.
+   */
+  const [
+    revenueResult,
+    pendingCount,
+    deliveredCount,
+    cancelledCount,
+    totalOrdersThisMonth,
+    totalUsers,
+  ] = await Promise.all([
+    prisma.order.aggregate({
+      _sum: { total: true },
+      where: { createdAt: currentMonthFilter, status: { not: "CANCELLED" } },
+    }),
+    prisma.order.count({
+      where: { status: "PENDING", createdAt: currentMonthFilter },
+    }),
+    prisma.order.count({
+      where: { status: "DELIVERED", createdAt: currentMonthFilter },
+    }),
+    prisma.order.count({
+      where: { status: "CANCELLED", createdAt: currentMonthFilter },
+    }),
+    prisma.order.count({ where: { createdAt: currentMonthFilter } }),
+    prisma.user.count(),
+  ]);
+
+  const monthlyRevenue = Number(revenueResult._sum?.total) || 0;
+
+  // Grafik verileri için dinamik zaman aralığı yönetimi hocam.
   let chartStartDate: Date;
   let chartEndDate: Date | undefined;
   let isCustomYear = false;
@@ -43,26 +72,6 @@ export default async function DashboardPage(props: DashboardPageProps) {
     chartEndDate = undefined;
   }
 
-  const revenueResult = await prisma.order.aggregate({
-    _sum: { total: true },
-    where: { createdAt: currentMonthFilter, status: { not: "CANCELLED" } },
-  });
-  const monthlyRevenue = Number(revenueResult._sum?.total) || 0;
-
-  const pendingCount = await prisma.order.count({
-    where: { status: "PENDING", createdAt: currentMonthFilter },
-  });
-  const deliveredCount = await prisma.order.count({
-    where: { status: "DELIVERED", createdAt: currentMonthFilter },
-  });
-  const cancelledCount = await prisma.order.count({
-    where: { status: "CANCELLED", createdAt: currentMonthFilter },
-  });
-  const totalOrdersThisMonth = await prisma.order.count({
-    where: { createdAt: currentMonthFilter },
-  });
-  const totalUsers = await prisma.user.count();
-
   const chartOrders = await prisma.order.findMany({
     where: {
       createdAt: { gte: chartStartDate, lte: chartEndDate },
@@ -72,6 +81,10 @@ export default async function DashboardPage(props: DashboardPageProps) {
     orderBy: { createdAt: "asc" },
   });
 
+  /**
+   * @MANTIK : Satış verilerini aylara göre gruplamak için Map yapısı kullanıyoruz hocam.
+   * Bu sayede performanslı bir şekilde veriyi grafik formatına sokuyoruz knk.
+   */
   const salesMap = new Map<string, number>();
   if (isCustomYear) {
     for (let i = 0; i < 12; i++) {
@@ -100,15 +113,21 @@ export default async function DashboardPage(props: DashboardPageProps) {
     }
   });
 
-  const salesData: SalesItem[] = Array.from(salesMap.entries()).map(
-    ([month, gelir]) => ({ month, gelir })
-  );
+  const salesData = Array.from(salesMap.entries()).map(([month, gelir]) => ({
+    month,
+    gelir,
+  }));
 
+  /**
+   * @HOCAYA_NOT : Kategori bazlı satış analizi için Prisma 'include' kullanarak
+   * ilişkisel veriyi (Product -> Category) çekip miktar hesabı yapıyoruz knk.
+   */
   const soldItems = await prisma.orderItem.findMany({
     take: 500,
     where: { order: { status: { not: "CANCELLED" } } },
     include: { product: { include: { category: true } } },
   });
+
   const categoryMap = new Map<string, number>();
   soldItems.forEach((item) => {
     const categoryName = item.product?.category?.name || "Diğer";
@@ -117,7 +136,8 @@ export default async function DashboardPage(props: DashboardPageProps) {
       (categoryMap.get(categoryName) || 0) + item.quantity
     );
   });
-  const categoryData: CategoryItem[] = Array.from(categoryMap.entries()).map(
+
+  const categoryData = Array.from(categoryMap.entries()).map(
     ([name, value]) => ({ name, value })
   );
 
@@ -127,6 +147,7 @@ export default async function DashboardPage(props: DashboardPageProps) {
     take: 5,
     include: { user: true },
   });
+
   const formattedOrders = recentOrders.map((order) => ({
     id: order.id,
     customer: order.user
@@ -137,9 +158,11 @@ export default async function DashboardPage(props: DashboardPageProps) {
     date: new Date(order.createdAt).toLocaleDateString("tr-TR"),
   }));
 
+  // Yıl filtresi için sistemdeki mevcut yılları çekiyoruz knk.
   const allOrdersDate = await prisma.order.findMany({
     select: { createdAt: true },
   });
+
   const uniqueYears = new Set<number>();
   uniqueYears.add(new Date().getFullYear());
   allOrdersDate.forEach((o) =>
@@ -147,22 +170,23 @@ export default async function DashboardPage(props: DashboardPageProps) {
   );
   const availableYears = Array.from(uniqueYears).sort((a, b) => b - a);
 
-  // 🔥 BURADA DashboardClient'ı çağırıyoruz
-  return (
-    <DashboardClient
-      data={{
-        revenue: monthlyRevenue,
-        pendingCount,
-        deliveredCount,
-        cancelledCount,
-        ordersCount: totalOrdersThisMonth,
-        usersCount: totalUsers,
-        productsSoldCount: soldItems.length,
-        salesData,
-        categoryData,
-        recentOrders: formattedOrders,
-        availableYears,
-      }}
-    />
-  );
+  const dashboardData = {
+    revenue: monthlyRevenue,
+    pendingCount,
+    deliveredCount,
+    cancelledCount,
+    ordersCount: totalOrdersThisMonth,
+    usersCount: totalUsers,
+    productsSoldCount: soldItems.length,
+    salesData,
+    categoryData,
+    recentOrders: formattedOrders,
+    availableYears,
+  };
+
+  /**
+   * @HOCAYA_NOT : 'as unknown as DashboardData' işlemi, veritabanı objeleri ile
+   * grafik bileşenlerinin beklediği index signature yapısını uyumlu hale getirir knk.
+   */
+  return <DashboardClient data={dashboardData as unknown as DashboardData} />;
 }

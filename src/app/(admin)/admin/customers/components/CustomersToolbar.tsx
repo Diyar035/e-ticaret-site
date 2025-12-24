@@ -1,90 +1,106 @@
 "use client";
 
-import { useState } from "react";
-import { Search, Filter, Download, Loader2 } from "lucide-react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useDebouncedCallback } from "use-debounce";
-import { toast } from "react-hot-toast";
+import { Search, FileSpreadsheet, Trash2, X } from "lucide-react";
+import * as XLSX from "xlsx";
+import { Customer } from "./CustomersClient";
+import { Dispatch, SetStateAction } from "react";
 
+// Props tanımını tam hale getirdik
 interface CustomersToolbarProps {
-  // Soru işareti ekledik (opsiyonel olabilir)
-  selectedIds?: string[];
+  data: Customer[];
+  searchTerm: string;
+  setSearchTerm: Dispatch<SetStateAction<string>>;
+  selectedIds: string[];
+  onClear: () => void;
 }
 
-// DÜZELTME BURADA: { selectedIds = [] } diyerek varsayılan değer atadık.
-// Artık veri gelmezse boş dizi kabul eder ve patlamaz.
 export default function CustomersToolbar({
-  selectedIds = [],
+  data,
+  searchTerm,
+  setSearchTerm,
+  selectedIds,
+  onClear,
 }: CustomersToolbarProps) {
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-  const { replace } = useRouter();
-  const [downloading, setDownloading] = useState(false);
+  const downloadExcel = () => {
+    const exportList =
+      selectedIds.length > 0
+        ? data.filter((c) => selectedIds.includes(c.id))
+        : data;
 
-  const handleSearch = useDebouncedCallback((term: string) => {
-    const params = new URLSearchParams(searchParams);
-    if (term) {
-      params.set("q", term);
-    } else {
-      params.delete("q");
-    }
-    replace(`${pathname}?${params.toString()}`);
-  }, 300);
-
-  const handleExport = async () => {
-    try {
-      setDownloading(true);
-
-      let url = "/api/customers/export";
-
-      if (selectedIds.length > 0) {
-        url += `?ids=${selectedIds.join(",")}`;
-        toast.success(`${selectedIds.length} kayıt indiriliyor...`);
-      } else {
-        toast.success("Tüm liste indiriliyor...");
-      }
-
-      window.location.href = url;
-    } catch (error) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      toast.error("İndirme başarısız.");
-    } finally {
-      setTimeout(() => setDownloading(false), 2000);
-    }
+    const worksheet = XLSX.utils.json_to_sheet(
+      exportList.map((u) => ({
+        Müşteri: u.name,
+        "E-Posta": u.email,
+        Telefon: u.phone,
+        Kayıt: u.createdAt,
+      }))
+    );
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Müşteriler");
+    XLSX.writeFile(workbook, "Musteri_Portfoyu.xlsx");
   };
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-      <div className="relative w-full sm:max-w-md group">
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors">
-          <Search size={20} />
+    <div className="space-y-8 animate-in fade-in slide-in-from-top-4 duration-700">
+      <div className="flex flex-col md:flex-row justify-between items-end gap-6 text-left">
+        <div>
+          <h1 className="text-5xl font-black text-slate-900 tracking-tighter uppercase italic leading-none">
+            Müşteri Portföyü
+          </h1>
+          <p className="text-slate-500 font-medium mt-4 italic flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-pulse"></span>
+            Sistemde listelenen {data.length} aktif kayıt bulundu.
+          </p>
         </div>
-        <input
-          onChange={(e) => handleSearch(e.target.value)}
-          defaultValue={searchParams.get("q")?.toString()}
-          placeholder="Ara..."
-          className="h-12 w-full rounded-xl border border-gray-200 pl-11 pr-4 text-sm bg-gray-50/50 focus:bg-white focus:border-indigo-500 focus:outline-none transition-all"
-        />
-      </div>
-
-      <div className="flex items-center gap-2 w-full sm:w-auto">
         <button
-          onClick={handleExport}
-          disabled={downloading}
-          className="flex-1 sm:flex-none items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-black transition-all shadow-lg active:scale-95 disabled:opacity-70"
+          onClick={downloadExcel}
+          className="flex items-center gap-3 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-[1.5rem] font-black shadow-2xl transition-all active:scale-95 group"
         >
-          {downloading ? (
-            <Loader2 size={16} className="animate-spin" />
-          ) : (
-            <Download size={16} />
-          )}
-          <span>
-            {selectedIds.length > 0
-              ? `Seçilenleri İndir (${selectedIds.length})`
-              : "Tümünü İndir"}
-          </span>
+          <FileSpreadsheet size={22} />
+          {selectedIds.length > 0 ? "SEÇİLİLERİ AKTAR" : "EXCEL'E AKTAR"}
         </button>
       </div>
+
+      <div className="relative group text-left">
+        <Search
+          className="absolute left-8 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors"
+          size={28}
+        />
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="İsim, e-posta veya telefon ile akıllı ara..."
+          className="w-full pl-20 pr-12 py-8 bg-white shadow-[0_20px_50px_rgba(0,0,0,0.04)] rounded-[3rem] text-xl font-medium outline-none border-2 border-transparent focus:border-indigo-100 transition-all placeholder:text-slate-300"
+        />
+        {searchTerm && (
+          <button
+            onClick={() => setSearchTerm("")}
+            className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-600"
+          >
+            <X size={24} />
+          </button>
+        )}
+      </div>
+
+      {selectedIds.length > 0 && (
+        <div className="fixed bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-8 bg-slate-900 text-white px-12 py-6 rounded-[2.5rem] shadow-2xl z-50 animate-in fade-in slide-in-from-bottom-12 border border-white/10 backdrop-blur-xl">
+          <span className="font-black border-r border-white/20 pr-8 tracking-tighter italic uppercase text-lg text-indigo-400">
+            {selectedIds.length} Kayıt Seçildi
+          </span>
+          <button className="flex items-center gap-2 hover:text-red-400 transition-colors font-bold text-sm uppercase">
+            {" "}
+            <Trash2 size={20} /> SEÇİLENLERİ SİL{" "}
+          </button>
+          <button
+            onClick={onClear}
+            className="text-white/40 hover:text-white transition-all font-bold text-sm uppercase"
+          >
+            {" "}
+            VAZGEÇ{" "}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
