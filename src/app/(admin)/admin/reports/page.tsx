@@ -4,7 +4,7 @@ import { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
-// 1. Tip tanımlarını Prisma'nın kendi tiplerinden türeterek "any" kullanımını bitiriyoruz
+// 1. Tip tanımlarını Prisma'nın kendi yapısından türeterek 'any' kullanımını bitirdik.
 type OrderWithRelations = Prisma.OrderGetPayload<{
   include: {
     items: { include: { product: true } };
@@ -19,12 +19,32 @@ type OrderWithRelations = Prisma.OrderGetPayload<{
   };
 }>;
 
+// Interface tanımlayarak ESLint hatalarını gideriyoruz.
+interface ReportOrder {
+  id: string;
+  customer: string;
+  email: string;
+  phone: string;
+  amount: number;
+  status: string;
+  date: string;
+  details: string;
+  itemsCount: number;
+}
+
+interface ReportDataset {
+  revenue: number;
+  deliveredCount: number;
+  salesData: { month: string; gelir: number }[];
+  recentOrders: ReportOrder[];
+  availableYears: number[];
+}
+
 export default async function ReportsPage(props: {
   searchParams: Promise<{ customer?: string; start?: string; end?: string }>;
 }) {
   const searchParams = await props.searchParams;
 
-  // 2. Filtreleme kriterini Prisma tipiyle tanımlıyoruz
   const whereCriteria: Prisma.OrderWhereInput = {
     status: "DELIVERED",
   };
@@ -40,7 +60,7 @@ export default async function ReportsPage(props: {
     ];
   }
 
-  // 3. Veritabanı sorgusu
+  // Veritabanı sorgusu
   const [salesStats, allOrders] = await Promise.all([
     prisma.order.aggregate({
       where: whereCriteria,
@@ -64,27 +84,36 @@ export default async function ReportsPage(props: {
     }),
   ]);
 
-  // 4. Verileri Client'a göndermeden önce formatlıyoruz
-  const reportDataset = {
+  // Verileri formatlayıp 'any' yerine hazırladığımız interfaceleri kullanıyoruz.
+  const reportDataset: ReportDataset = {
     revenue: Number(salesStats._sum.total) || 0,
     deliveredCount: salesStats._count.id || 0,
-    salesData: [],
-    recentOrders: (allOrders as OrderWithRelations[]).map((order) => ({
-      id: order.id,
-      customer:
-        order.customerName ||
-        (order.user
-          ? `${order.user.firstName} ${order.user.lastName}`
-          : "Bilinmeyen"),
-      email: order.customerEmail || order.user?.email || "N/A",
-      // Şemandaki phoneNumber alanını buraya bağladık
-      phone: order.user?.phoneNumber || "-",
-      amount: Number(order.total),
-      status: order.status,
-      date: new Date(order.createdAt).toLocaleDateString("tr-TR"),
-      details: order.items?.map((oi) => oi.product?.name).join(", ") || "-",
-    })),
-    availableUsers: [],
+    salesData: [], // İstatistik gerekirse buraya eklenebilir.
+    availableYears: [2024, 2025],
+    recentOrders: (allOrders as OrderWithRelations[]).map((order) => {
+      // Adet hesaplaması (Aynı üründen 2 tane varsa artık doğru sayar)
+      const totalQty =
+        order.items?.reduce((sum, item) => sum + item.quantity, 0)   || 0;
+
+      return {
+        id: order.id,
+        customer:
+          order.customerName ||
+          (order.user
+            ? `${order.user.firstName} ${order.user.lastName}`
+            : "Bilinmeyen"),
+        email: order.customerEmail || order.user?.email || "N/A",
+        phone: order.user?.phoneNumber || "-",
+        amount: Number(order.total),
+        status: order.status,
+        date: new Date(order.createdAt).toLocaleDateString("tr-TR"),
+        details:
+          order.items
+            ?.map((oi) => `${oi.product?.name} (x${oi.quantity})`)
+            .join(", ") || "-",
+        itemsCount: totalQty,
+      };
+    }),
   };
 
   return <ReportsClient data={reportDataset} />;

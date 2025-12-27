@@ -120,7 +120,7 @@ export default async function DashboardPage(props: {
 
   /**
    * @HOCAYA_NOT : Kategori bazlı satış analizi için Prisma 'include' kullanarak
-   * ilişkisel veriyi (Product -> Category) çekip miktar hesabı yapıyoruz knk.
+   * ilişkisel veriyi (Product -> Category) çekip miktar hesabı yapı  yoruz knk.
    */
   const soldItems = await prisma.orderItem.findMany({
     take: 500,

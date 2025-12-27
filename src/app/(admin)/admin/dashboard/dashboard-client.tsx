@@ -186,8 +186,12 @@ export default function DashboardClient({ data }: DashboardClientProps) {
         })}
       </div>
 
-      {/* Grafik Alanları */}
+      {/* Grafik Alanları - ŞİMDİ YERLERİ DEĞİŞMİŞ HALDE */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-10">
+        {/* SOLDAKİ KÜÇÜK GRAFİK: Kategori Dağılımı */}
+       
+
+        {/* SAĞDAKİ GENİŞ GRAFİK: Satış Performansı */}
         <div className="xl:col-span-2 bg-white rounded-[2.5rem] border border-gray-100 p-8 shadow-sm">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-xl font-black text-gray-900 tracking-tight italic">
@@ -248,7 +252,7 @@ export default function DashboardClient({ data }: DashboardClientProps) {
           </div>
         </div>
 
-        <div className="bg-white rounded-[2.5rem] border border-gray-100 p-8 shadow-sm">
+         <div className="bg-white rounded-[2.5rem] border border-gray-100 p-8 shadow-sm">
           <h2 className="text-xl font-black text-gray-900 tracking-tight mb-8 italic">
             Kategori Dağılımı
           </h2>
@@ -261,7 +265,6 @@ export default function DashboardClient({ data }: DashboardClientProps) {
                   outerRadius={100}
                   paddingAngle={8}
                   dataKey="value"
-                  // 🔥 HATAYI BİTİREN KISIM BURASI 🔥
                   label={({ name, percent }: PieLabelRenderProps) =>
                     `${name} %${((percent as number) * 100).toFixed(0)}`
                   }
